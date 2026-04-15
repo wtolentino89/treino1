@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Registro de Cargas</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#b6f000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0d; --surface: #161616; --surface2: #1e1e1e;
+    --border: #2a2a2a; --green: #b6f000; --gold: #f5a623;
+    --blue: #4fc3f7; --white: #f0f0f0; --muted: #666; --input-bg: #111;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--white); font-family: 'Barlow', sans-serif; min-height: 100vh; }
+
+  header { background: var(--surface); border-bottom: 2px solid var(--green); padding: 14px 16px 10px; position: sticky; top: 0; z-index: 100; }
+  header h1 { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 22px; letter-spacing: 3px; color: var(--green); text-transform: uppercase; }
+  header p { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 62px; z-index: 99; }
+  .tab { flex: 1; padding: 11px 4px; text-align: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 2px; color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; transition: all .2s; }
+  .tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+  .page { display: none; padding: 12px 12px 80px; }
+  .page.active { display: block; }
+
+  .section-label { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin: 18px 0 6px; display: flex; align-items: center; gap: 8px; }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border); }
+  .card-header:hover { background: var(--surface2); }
+  .ex-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 15px; color: var(--blue); text-decoration: underline; text-underline-offset: 3px; }
+  .ex-name.no-link { color: var(--white); text-decoration: none; }
+  .ex-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .chevron { color: var(--muted); font-size: 13px; transition: transform .2s; }
+  .card.open .chevron { transform: rotate(180deg); }
+
+  .load-grid { display: none; padding: 10px 12px 12px; background: var(--surface2); }
+  .card.open .load-grid { display: block; }
+  .load-grid-title { font-size: 10px; color: var(--muted); letter-spacing: 1px; margin-bottom: 8px; text-transform: uppercase; }
+  .sessions-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .session-slot label { display: block; font-size: 10px; color: var(--gold); font-family: 'Barlow Condensed', sans-serif; font-weight: 600; letter-spacing: 1px; margin-bottom: 3px; }
+  .session-slot input { width: 100%; background: var(--input-bg); border: 1px solid var(--border); border-radius: 5px; color: var(--white); font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 600; text-align: center; padding: 7px 4px; transition: border-color .15s; -webkit-appearance: none; }
+  .session-slot input:focus { outline: none; border-color: var(--green); background: #1a1a0a; }
+  .session-slot input::placeholder { color: #333; }
+
+  .cond-block { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+  .cond-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 14px; color: var(--gold); margin-bottom: 4px; }
+  .cond-detail { font-size: 12px; color: var(--muted); }
+
+  #save-toast { position: fixed; bottom: 20px; right: 16px; background: var(--green); color: #000; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 1px; padding: 8px 16px; border-radius: 20px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 999; }
+  #save-toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ Registro de Cargas</h1>
+  <p>Toque no exercício → preencha o peso (kg) por sessão — salvo automaticamente</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('a')">TREINO A</div>
+  <div class="tab" onclick="switchTab('b')">TREINO B</div>
+  <div class="tab" onclick="switchTab('c')">TREINO C</div>
+</div>
+
+<!-- TREINO A -->
+<div class="page active" id="page-a">
+  <div class="section-label">Ativação</div>
+  <div class="card" id="card-a-pt"><div class="card-header" onclick="toggleCard('a-pt')"><div><div class="ex-name">Plate Thruster</div><div class="ex-meta">2 rounds · 6 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-a-pt"></div></div></div>
+  <div class="card" id="card-a-pr"><div class="card-header" onclick="toggleCard('a-pr')"><div><div class="ex-name">Passada com rotação</div><div class="ex-meta">2 rounds · 6/6 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-a-pr"></div></div></div>
+  <div class="card" id="card-a-pl"><div class="card-header" onclick="toggleCard('a-pl')"><div><div class="ex-name no-link">Prancha lateral foco adutores</div><div class="ex-meta">2 rounds · 25/25 seg</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-a-pl"></div></div></div>
+
+  <div class="section-label">Força</div>
+  <div class="card" id="card-a-zs"><div class="card-header" onclick="toggleCard('a-zs')"><div><div class="ex-name">Zercher Squat / Back Squat*</div><div class="ex-meta">4 rounds · 3 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-a-zs"></div></div></div>
+  <div class="card" id="card-a-ds"><div class="card-header" onclick="toggleCard('a-ds')"><div><div class="ex-name">Double DB Snatch</div><div class="ex-meta">4 rounds · 6 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-a-ds"></div></div></div>
+  <div class="card" id="card-a-wl"><div class="card-header" onclick="toggleCard('a-wl')"><div><div class="ex-name">Walking Lunges</div><div class="ex-meta">3 rounds · 8/8 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-a-wl"></div></div></div>
+  <div class="card" id="card-a-jl"><div class="card-header" onclick="toggleCard('a-jl')"><div><div class="ex-name no-link">Jumping Lunges</div><div class="ex-meta">3 rounds · 8/8 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-a-jl"></div></div></div>
+  <div class="card" id="card-a-mf"><div class="card-header" onclick="toggleCard('a-mf')"><div><div class="ex-name">Cadeira ou Mesa Flexora</div><div class="ex-meta">2 rounds · 12 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-a-mf"></div></div></div>
+  <div class="card" id="card-a-be"><div class="card-header" onclick="toggleCard('a-be')"><div><div class="ex-name">Back Extension</div><div class="ex-meta">2 rounds · 20 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-a-be"></div></div></div>
+
+  <div class="section-label">Condicionamento</div>
+  <div class="card" id="card-a-bd"><div class="card-header" onclick="toggleCard('a-bd')"><div><div class="ex-name">Burpee Deadlift</div><div class="ex-meta">4 a 6x · 30s ON / 15s OFF</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-a-bd"></div></div></div>
+</div>
+
+<!-- TREINO B -->
+<div class="page" id="page-b">
+  <div class="section-label">Ativação</div>
+  <div class="card" id="card-b-ci"><div class="card-header" onclick="toggleCard('b-ci')"><div><div class="ex-name">Crucifixo invertido na polia</div><div class="ex-meta">2 rounds · 12 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-b-ci"></div></div></div>
+
+  <div class="section-label">Força</div>
+  <div class="card" id="card-b-sp"><div class="card-header" onclick="toggleCard('b-sp')"><div><div class="ex-name">Supino reto com pausa</div><div class="ex-meta">3 rounds · 5-3-1 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-b-sp"></div></div></div>
+  <div class="card" id="card-b-fs"><div class="card-header" onclick="toggleCard('b-fs')"><div><div class="ex-name no-link">Flexão de Braço com salto</div><div class="ex-meta">3 rounds · 5 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-b-fs"></div></div></div>
+  <div class="card" id="card-b-bf"><div class="card-header" onclick="toggleCard('b-bf')"><div><div class="ex-name">Barra Fixa com peso</div><div class="ex-meta">3 rounds · 5-3-1 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-b-bf"></div></div></div>
+  <div class="card" id="card-b-rh"><div class="card-header" onclick="toggleCard('b-rh')"><div><div class="ex-name">Remada com halter PESADO</div><div class="ex-meta">3 rounds · 5/5 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-b-rh"></div></div></div>
+
+  <div class="section-label">Super Set 1 — 3x</div>
+  <div class="card" id="card-b-rc"><div class="card-header" onclick="toggleCard('b-rc')"><div><div class="ex-name">Remada curvada com barra</div><div class="ex-meta">8 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-b-rc"></div></div></div>
+  <div class="card" id="card-b-hc"><div class="card-header" onclick="toggleCard('b-hc')"><div><div class="ex-name">Hang Clean High Pull</div><div class="ex-meta">6 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-b-hc"></div></div></div>
+  <div class="card" id="card-b-pp"><div class="card-header" onclick="toggleCard('b-pp')"><div><div class="ex-name">Push Press</div><div class="ex-meta">4 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-b-pp"></div></div></div>
+  <div class="card" id="card-b-fa"><div class="card-header" onclick="toggleCard('b-fa')"><div><div class="ex-name no-link">Flexões Aberta</div><div class="ex-meta">4 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-b-fa"></div></div></div>
+  <div class="card" id="card-b-fm"><div class="card-header" onclick="toggleCard('b-fm')"><div><div class="ex-name no-link">Flexões Média</div><div class="ex-meta">4 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-b-fm"></div></div></div>
+  <div class="card" id="card-b-ff"><div class="card-header" onclick="toggleCard('b-ff')"><div><div class="ex-name no-link">Flexões Fechada</div><div class="ex-meta">4 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-b-ff"></div></div></div>
+
+  <div class="section-label">Super Set 2 — 2x</div>
+  <div class="card" id="card-b-bh"><div class="card-header" onclick="toggleCard('b-bh')"><div><div class="ex-name">Bíceps com halter Alternado</div><div class="ex-meta">2 rounds · 30 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-b-bh"></div></div></div>
+  <div class="card" id="card-b-tp"><div class="card-header" onclick="toggleCard('b-tp')"><div><div class="ex-name">Troca de pegada com anilha</div><div class="ex-meta">2 rounds · 30 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-b-tp"></div></div></div>
+</div>
+
+<!-- TREINO C -->
+<div class="page" id="page-c">
+  <div class="section-label">Ativação</div>
+  <div class="card" id="card-c-dd"><div class="card-header" onclick="toggleCard('c-dd')"><div><div class="ex-name">DB Deadlift</div><div class="ex-meta">2 rounds · 6 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-c-dd"></div></div></div>
+  <div class="card" id="card-c-sw"><div class="card-header" onclick="toggleCard('c-sw')"><div><div class="ex-name">DB Swing</div><div class="ex-meta">2 rounds · 6 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-c-sw"></div></div></div>
+  <div class="card" id="card-c-rt"><div class="card-header" onclick="toggleCard('c-rt')"><div><div class="ex-name">Rotação de tronco polia/elástico</div><div class="ex-meta">2 rounds · 12/12 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-c-rt"></div></div></div>
+
+  <div class="section-label">Força e Potência</div>
+  <div class="card" id="card-c-ch"><div class="card-header" onclick="toggleCard('c-ch')"><div><div class="ex-name">Clean High Pull</div><div class="ex-meta">4x · 3 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-c-ch"></div></div></div>
+  <div class="card" id="card-c-sj"><div class="card-header" onclick="toggleCard('c-sj')"><div><div class="ex-name no-link">Split Power Jump</div><div class="ex-meta">4x · 6 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-c-sj"></div></div></div>
+  <div class="card" id="card-c-dl"><div class="card-header" onclick="toggleCard('c-dl')"><div><div class="ex-name">Deadlift Deadstop</div><div class="ex-meta">6-6-3-1-1</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-c-dl"></div></div></div>
+
+  <div class="section-label">Resistência — 3 a 4x sem pausa</div>
+  <div class="card" id="card-c-gr"><div class="card-header" onclick="toggleCard('c-gr')"><div><div class="ex-name">Gorilla Row</div><div class="ex-meta">16 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-c-gr"></div></div></div>
+  <div class="card" id="card-c-da"><div class="card-header" onclick="toggleCard('c-da')"><div><div class="ex-name">Desenvolvimento alternado</div><div class="ex-meta">16 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-c-da"></div></div></div>
+  <div class="card" id="card-c-fc"><div class="card-header" onclick="toggleCard('c-fc')"><div><div class="ex-name no-link">Flexão de braço curtinha</div><div class="ex-meta">16 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-c-fc"></div></div></div>
+  <div class="card" id="card-c-ba"><div class="card-header" onclick="toggleCard('c-ba')"><div><div class="ex-name">Bíceps alternado</div><div class="ex-meta">16 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-c-ba"></div></div></div>
+  <div class="card" id="card-c-rw"><div class="card-header" onclick="toggleCard('c-rw')"><div><div class="ex-name">Russian Twist</div><div class="ex-meta">16 reps</div></div><span class="chevron">▼</span></div><div class="load-grid"><div class="load-grid-title">Carga por sessão (kg)</div><div class="sessions-grid" id="grid-c-rw"></div></div></div>
+</div>
+
+<div id="save-toast">✓ SALVO</div>
+
+<script>
+const ALL_GRIDS = [
+  'a-pt','a-pr','a-pl','a-zs','a-ds','a-wl','a-jl','a-mf','a-be','a-bd',
+  'b-ci','b-sp','b-fs','b-bf','b-rh','b-rc','b-hc','b-pp','b-fa','b-fm','b-ff','b-bh','b-tp',
+  'c-dd','c-sw','c-rt','c-ch','c-sj','c-dl','c-gr','c-da','c-fc','c-ba','c-rw'
+];
+const NUM_SESSIONS = 8;
+
+function buildGrids() {
+  ALL_GRIDS.forEach(id => {
+    const el = document.getElementById('grid-' + id);
+    if (!el) return;
+    for (let i = 1; i <= NUM_SESSIONS; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'session-slot';
+      slot.innerHTML = `<label>S${i}</label><input type="number" inputmode="decimal" min="0" step="0.5" placeholder="—" data-key="${id}-s${i}">`;
+      el.appendChild(slot);
+    }
+  });
+}
+
+function loadAll() {
+  document.querySelectorAll('input[data-key]').forEach(inp => {
+    const val = localStorage.getItem('wt_' + inp.dataset.key);
+    if (val !== null) inp.value = val;
+  });
+}
+
+let saveTimer;
+function saveInput(inp) {
+  localStorage.setItem('wt_' + inp.dataset.key, inp.value);
+  clearTimeout(saveTimer);
+  const toast = document.getElementById('save-toast');
+  toast.classList.add('show');
+  saveTimer = setTimeout(() => toast.classList.remove('show'), 1400);
+}
+
+function toggleCard(id) {
+  document.getElementById('card-' + id).classList.toggle('open');
+}
+
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('active', ['a','b','c'][i] === t));
+  document.querySelectorAll('.page').forEach(el => el.classList.toggle('active', el.id === 'page-' + t));
+}
+
+buildGrids();
+loadAll();
+document.addEventListener('input', e => { if (e.target.matches('input[data-key]')) saveInput(e.target); });
+
+// PWA Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+</script>
+</body>
+</html>
